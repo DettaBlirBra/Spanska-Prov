@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spanska – övningsverktyg</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--txt:#1f2937;--mut:#6b7280;--pri:#4f46e5;--pri2:#4338ca;--ok:#16a34a;--bad:#dc2626;--bd:#e5e7eb}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt);line-height:1.5}
+header{background:var(--card);border-bottom:1px solid var(--bd);padding:14px 16px;position:sticky;top:0;z-index:5}
+h1{font-size:1.2rem;margin:0 0 10px}
+nav{display:flex;gap:10px;flex-wrap:wrap}
+nav button{flex:1;min-width:140px;padding:12px;font-size:1rem;font-weight:600;border:2px solid var(--pri);background:#fff;color:var(--pri);border-radius:10px;cursor:pointer}
+nav button.active{background:var(--pri);color:#fff}
+main{max-width:820px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+h2{margin:0 0 12px;font-size:1.1rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.full{grid-column:1/-1}
+label{display:block;font-size:.85rem;color:var(--mut);margin-bottom:3px}
+input[type=text],input[type=number],select,textarea{width:100%;padding:10px;border:1px solid var(--bd);border-radius:8px;font:inherit;background:#fff}
+input:focus,select:focus,textarea:focus{outline:2px solid #c7d2fe;border-color:var(--pri)}
+textarea{min-height:200px;resize:vertical}
+.chk{display:inline-flex;align-items:center;gap:8px;margin-right:18px;font-size:1rem;color:var(--txt)}
+.chk input{width:18px;height:18px}
+.sub{border-left:4px solid #c7d2fe;padding:10px 0 4px 12px;margin-top:12px}
+.hidden{display:none}
+.btn{padding:10px 16px;border:0;border-radius:8px;font:inherit;font-weight:600;cursor:pointer;background:var(--pri);color:#fff}
+.btn:hover{background:var(--pri2)}
+.btn.sec{background:#eef2ff;color:var(--pri)}
+.btn.red{background:#fee2e2;color:var(--bad)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.badge{font-size:.78rem;font-weight:700;padding:3px 10px;border-radius:99px;background:#f3f4f6;color:var(--mut)}
+.badge.on{background:#dcfce7;color:var(--ok)}
+.text{white-space:pre-wrap;font-size:1.15rem;line-height:1.8}
+.blur{filter:blur(8px);user-select:none}
+.diff{font-size:1.1rem;line-height:2}
+.ok{color:var(--ok)}
+.miss{background:#fee2e2;color:var(--bad);padding:1px 4px;border-radius:4px;font-weight:600}
+.extra{background:#fef3c7;color:#92400e;text-decoration:line-through;padding:1px 4px;border-radius:4px}
+.legend{font-size:.85rem;color:var(--mut);margin-top:8px}
+.score{font-size:1.6rem;font-weight:800}
+.muted{color:var(--mut)}
+dialog{border:0;border-radius:14px;padding:22px;max-width:380px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 18px;border-radius:99px;opacity:0;transition:opacity .3s;pointer-events:none}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+<header>
+ <h1>🇪🇸 Spanska – övningsverktyg</h1>
+ <nav>
+   <button id="bCreate">Skapa mall</button>
+   <button id="bList">Ladda mallar</button>
+ </nav>
+</header>
+<main id="app"></main>
+<dialog id="dlg">
+ <p id="dlgMsg" style="margin-top:0;font-weight:600"></p>
+ <div class="row" style="justify-content:flex-end">
+   <button class="btn sec" id="dlgNo">Avbryt</button>
+   <button class="btn red" id="dlgYes">Ta bort</button>
+ </div>
+</dialog>
+<div id="toast"></div>
+
+<script>
+const KEY = 'spanskaMallar';
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- Storage ---------- */
+function loadAll(){ try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch(e){ return []; } }
+function saveAll(){ try { localStorage.setItem(KEY, JSON.stringify(T)); } catch(e){ alert('Kunde inte spara i LocalStorage.'); } }
+let T = loadAll();
+
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); }
+
+/* ---------- Hobby dictionary (Swedish -> Spanish) ---------- */
+const HOB = {
+ 'musik':'la música','måla':'pintar','fotboll':'el fútbol','tv-spel':'los videojuegos','tvspel':'los videojuegos',
+ 'läsa':'leer','laga mat':'cocinar','baka':'hornear pasteles','dansa':'bailar','simma':'nadar','sjunga':'cantar',
+ 'rita':'dibujar','träna':'entrenar','gitarr':'la guitarra','spela gitarr':'tocar la guitarra','spela piano':'tocar el piano',
+ 'resa':'viajar','filmer':'las películas','titta på film':'ver películas','cykla':'montar en bicicleta','promenera':'pasear',
+ 'fiska':'pescar','fotografera':'sacar fotos','handboll':'el balonmano','basket':'el baloncesto','hockey':'el hockey',
+ 'tennis':'el tenis','springa':'correr','skriva':'escribir','djur':'los animales','shoppa':'ir de compras',
+ 'gaming':'los videojuegos','programmera':'programar','åka skidor':'esquiar','vara med kompisar':'estar con amigos','sova':'dormir'
+};
+function joinList(a){ return a.length<2 ? (a[0]||'') : a.slice(0,-1).join(', ') + ' y ' + a[a.length-1]; }
+function hobbies(str){
+ const list = String(str||'').split(',').map(s=>s.trim()).filter(Boolean)
+   .map(h => HOB[h.toLowerCase()] || h.toLowerCase());
+ return joinList(list);
+}
+
+/* ---------- Spanish text generator ---------- */
+function years(n){ return `${n} ${Number(n)===1?'año':'años'}`; }
+function buildText(d){
+ const out = [];
+ let s = [];
+ if(d.name) s.push(`Me llamo ${d.name}.`);
+ if(d.age) s.push(`Tengo ${years(d.age)}.`);
+ if(d.city) s.push(`Vivo en ${d.city}.`);
+ let h = hobbies(d.hobbies); if(h) s.push(`Me gusta ${h}.`);
+ out.push(s.join(' '));
+
+ d.parents.forEach(p => {
+   const w = p.role==='mamma' ? 'mamá' : 'papá';
+   s = [];
+   if(p.name) s.push(`Mi ${w} se llama ${p.name}.`); else s.push(`Tengo una ${w}.`.replace('una papá','un papá'));
+   if(p.age) s.push(`Tiene ${years(p.age)}.`);
+   h = hobbies(p.hobbies); if(h) s.push(`Le gusta ${h}.`);
+   out.push(s.join(' '));
+ });
+
+ const sib = d.siblings, n = sib.length;
+ if(n===0) out.push('No tengo hermanos.');
+ else {
+   const boys = sib.filter(x=>x.type==='bror').length;
+   const nums = ['cero','un','dos','tres','cuatro','cinco','seis'];
+   let intro;
+   if(n===1) intro = boys ? 'Tengo un hermano.' : 'Tengo una hermana.';
+   else intro = boys===0 ? `Tengo ${nums[n]} hermanas.` : `Tengo ${nums[n]} hermanos.`;
+   out.push(intro);
+   sib.forEach(x => {
+     const w = x.type==='bror' ? 'hermano' : 'hermana';
+     s = [];
+     s.push(x.name ? `Mi ${w} se llama ${x.name}.` : `Tengo un${x.type==='bror'?'':'a'} ${w}.`);
+     if(x.age) s.push(`Tiene ${years(x.age)}.`);
+     h = hobbies(x.hobbies); if(h) s.push(`Le gusta ${h}.`);
+     out.push(s.join(' '));
+   });
+ }
+ return out.filter(Boolean).join('\n\n');
+}
+
+/* ---------- Navigation ---------- */
+function setActive(id){ ['bCreate','bList'].forEach(b=>$('#'+b).classList.toggle('active', b===id)); }
+$('#bCreate').onclick = showCreate;
+$('#bList').onclick = showList;
+
+/* ---------- List view ---------- */
+function showList(){
+ setActive('bList');
+ const app = $('#app');
+ if(!T.length){ app.innerHTML = '<div class="card muted">Inga mallar sparade ännu. Klicka på "Skapa mall" för att börja.</div>'; return; }
+ app.innerHTML = T.map(t => `
+   <div class="card" data-id="${t.id}">
+     <div class="top">
+       <h2 style="margin:0">${esc(t.title)}</h2>
+       <span class="badge ${t.loaded?'on':''}">${t.loaded?'Laddad':'Inte laddad'}</span>
+     </div>
+     <div class="row">
+       <button class="btn sec" data-act="toggle">${t.loaded?'Unladda':'Ladda'}</button>
+       <button class="btn" data-act="run" ${t.loaded?'':'disabled title="Ladda mallen först"'}>Köra</button>
+       <button class="btn" data-act="read" ${t.loaded?'':'disabled title="Ladda mallen först"'}>Läsa</button>
+       <button class="btn red" data-act="del">Ta bort</button>
+     </div>
+   </div>`).join('');
+}
+$('#app').addEventListener('click', e => {
+ const b = e.target.closest('[data-act]'); if(!b) return;
+ const card = b.closest('[data-id]'); if(!card) return;
+ const t = T.find(x => x.id === card.dataset.id); if(!t) return;
+ const act = b.dataset.act;
+ if(act==='toggle'){ t.loaded = !t.loaded; saveAll(); showList(); }
+ else if(act==='read') showRead(t);
+ else if(act==='run') showRun(t);
+ else if(act==='del') confirmDelete(t);
+});
+
+/* ---------- Delete dialog ---------- */
+let pendingDel = null;
+function confirmDelete(t){
+ pendingDel = t.id;
+ $('#dlgMsg').textContent = 'Är du säker på att du vill ta bort denna mall?';
+ $('#dlg').showModal();
+}
+$('#dlgNo').onclick = () => { pendingDel=null; $('#dlg').close(); };
+$('#dlgYes').onclick = () => {
+ T = T.filter(x => x.id !== pendingDel); pendingDel=null; saveAll(); $('#dlg').close(); showList(); toast('Mallen togs bort');
+};
+
+/* ---------- Read mode ---------- */
+function showRead(t){
+ setActive('bList');
+ $('#app').innerHTML = `
+   <div class="card">
+     <div class="top"><h2 style="margin:0">Läsa – ${esc(t.title)}</h2>
+       <button class="btn sec" id="back">← Tillbaka</button></div>
+     <p class="text" id="txt">${esc(t.text)}</p>
+     <div class="row"><button class="btn sec" id="hide">Dölj / visa text</button></div>
+     <p class="legend">Tips: läs högt, dölj texten och försök komma ihåg den.</p>
+   </div>`;
+ $('#back').onclick = showList;
+ $('#hide').onclick = () => $('#txt').classList.toggle('blur');
+}
+
+/* ---------- Practice mode (diff) ---------- */
+const norm = w => w.toLowerCase().replace(/[.,;:!?¡¿"()]/g,'');
+function diffWords(a, b){
+ const n=a.length, m=b.length;
+ const dp = Array.from({length:n+1}, () => new Array(m+1).fill(0));
+ for(let i=n-1;i>=0;i--) for(let j=m-1;j>=0;j--)
+   dp[i][j] = norm(a[i])===norm(b[j]) ? dp[i+1][j+1]+1 : Math.max(dp[i+1][j], dp[i][j+1]);
+ const ops=[]; let i=0,j=0,match=0;
+ while(i<n && j<m){
+   if(norm(a[i])===norm(b[j])){ ops.push(['ok',a[i]]); i++; j++; match++; }
+   else if(dp[i+1][j] >= dp[i][j+1]){ ops.push(['miss',a[i]]); i++; }
+   else { ops.push(['extra',b[j]]); j++; }
+ }
+ while(i<n) ops.push(['miss',a[i++]]);
+ while(j<m) ops.push(['extra',b[j++]]);
+ return {ops, match};
+}
+function showRun(t){
+ setActive('bList');
+ $('#app').innerHTML = `
+   <div class="card">
+     <div class="top"><h2 style="margin:0">Köra – ${esc(t.title)}</h2>
+       <button class="btn sec" id="back">← Tillbaka</button></div>
+     <p class="muted">Skriv din spanska text utifrån minnet och klicka på "Rätta".</p>
+     <textarea id="ans" placeholder="Escribe aquí..."></textarea>
+     <div class="row">
+       <button class="btn" id="check">Rätta</button>
+       <button class="btn sec" id="clear">Försök igen</button>
+     </div>
+     <div id="res"></div>
+   </div>`;
+ $('#back').onclick = showList;
+ $('#clear').onclick = () => { $('#ans').value=''; $('#res').innerHTML=''; $('#ans').focus(); };
+ $('#check').onclick = () => {
+   const user = $('#ans').value.trim().split(/\s+/).filter(Boolean);
+   const correct = t.text.trim().split(/\s+/).filter(Boolean);
+   if(!user.length){ toast('Skriv något först'); return; }
+   const {ops, match} = diffWords(correct, user);
+   const pct = Math.round(100*match/Math.max(correct.length, user.length));
+   const html = ops.map(([k,w]) => `<span class="${k}">${esc(w)}</span>`).join(' ');
+   $('#res').innerHTML = `
+     <hr style="border:0;border-top:1px solid var(--bd);margin:18px 0">
+     <div class="score">${pct}% rätt ${pct===100?'🎉':''}</div>
+     <p class="diff">${html}</p>
+     <p class="legend"><span class="ok">Grönt</span> = rätt · <span class="miss">Rött</span> = saknas / felstavat ·
+     <span class="extra">Överstruket</span> = du skrev fel eller för mycket. Accenter (á, é, ñ, ¿, ¡) räknas.</p>`;
+ };
+}
+
+/* ---------- Create form ---------- */
+function parentBox(k, label){
+ return `
+   <label class="chk"><input type="checkbox" id="c-${k}"> ${label}</label>`;
+}
+function parentFields(k, label){
+ return `
+   <div class="sub hidden" id="p-${k}">
+     <strong>${label}</strong>
+     <div class="grid" style="margin-top:8px">
+       <div><label>Namn</label><input type="text" id="${k}-name"></div>
+       <div><label>Ålder</label><input type="number" min="0" max="120" id="${k}-age"></div>
+       <div class="full"><label>Hobbies (kommaseparerade)</label><input type="text" id="${k}-hob" placeholder="Läsa, Laga mat"></div>
+     </div>
+   </div>`;
+}
+function showCreate(){
+ setActive('bCreate');
+ $('#app').innerHTML = `
+ <form id="f" class="card" autocomplete="off">
+   <h2>Min information</h2>
+   <div class="grid">
+     <div class="full"><label>Mallens namn (valfritt)</label><input type="text" id="tTitle" placeholder="T.ex. Min presentation"></div>
+     <div><label>Namn</label><input type="text" id="mName" required></div>
+     <div><label>Ålder</label><input type="number" min="0" max="120" id="mAge"></div>
+     <div><label>Stad (där du bor)</label><input type="text" id="mCity"></div>
+     <div class="full"><label>Hobbies (kommaseparerade)</label><input type="text" id="mHob" placeholder="Musik, Måla, Fotboll"></div>
+   </div>
+   <h2 style="margin-top:24px">Föräldrar</h2>
+   ${parentBox('mamma','Mamma')} ${parentBox('pappa','Pappa')}
+   ${parentFields('mamma','Mamma')}
+   ${parentFields('pappa','Pappa')}
+   <h2 style="margin-top:24px">Syskon</h2>
+   <div style="max-width:220px"><label>Hur många syskon?</label>
+     <select id="sibN">${[0,1,2,3,4,5,6].map(n=>`<option value="${n}">${n}</option>`).join('')}</select></div>
+   <div id="sibs"></div>
+   <div class="row" style="margin-top:24px"><button class="btn" type="submit">Spara mall</button></div>
+ </form>`;
+
+ ['mamma','pappa'].forEach(k => {
+   $('#c-'+k).onchange = e => $('#p-'+k).classList.toggle('hidden', !e.target.checked);
+ });
+ $('#sibN').onchange = renderSibs;
+ $('#f').onsubmit = saveTemplate;
+}
+function collectSibs(){
+ return [...document.querySelectorAll('.sib')].map(r => ({
+   type: r.querySelector('.sType').value,
+   name: r.querySelector('.sName').value,
+   age: r.querySelector('.sAge').value,
+   hobbies: r.querySelector('.sHob').value
+ }));
+}
+function renderSibs(){
+ const n = +$('#sibN').value, old = collectSibs();
+ $('#sibs').innerHTML = Array.from({length:n}, (_,i) => {
+   const o = old[i] || {type:'bror',name:'',age:'',hobbies:''};
+   return `
+   <div class="sub sib">
+     <strong>Syskon ${i+1}</strong>
+     <div class="grid" style="margin-top:8px">
+       <div><label>Bror eller syster?</label>
+         <select class="sType">
+           <option value="bror" ${o.type==='bror'?'selected':''}>Bror</option>
+           <option value="syster" ${o.type==='syster'?'selected':''}>Syster</option>
+         </select></div>
+       <div><label>Namn</label><input type="text" class="sName" value="${esc(o.name)}"></div>
+       <div><label>Ålder</label><input type="number" min="0" max="120" class="sAge" value="${esc(o.age)}"></div>
+       <div class="full"><label>Hobbies (kommaseparerade)</label><input type="text" class="sHob" value="${esc(o.hobbies)}"></div>
+     </div>
+   </div>`;
+ }).join('');
+}
+function saveTemplate(e){
+ e.preventDefault();
+ const d = {
+   name: $('#mName').value.trim(), age: $('#mAge').value.trim(),
+   city: $('#mCity').value.trim(), hobbies: $('#mHob').value.trim(),
+   parents: [], siblings: collectSibs().map(s => ({...s, name:s.name.trim(), hobbies:s.hobbies.trim()}))
+ };
+ ['mamma','pappa'].forEach(k => {
+   if($('#c-'+k).checked) d.parents.push({
+     role:k, name:$('#'+k+'-name').value.trim(),
+     age:$('#'+k+'-age').value.trim(), hobbies:$('#'+k+'-hob').value.trim()
+   });
+ });
+ const title = $('#tTitle').value.trim() || ('Presentation – ' + d.name);
+ T.push({ id: 't' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+          title, data: d, text: buildText(d), loaded: false });
+ saveAll();
+ showList();
+ toast('Mallen sparades');
+}
+
+/* ---------- Init ---------- */
+showList();
+</script>
+</body>
+</html>
